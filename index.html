@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Rehab Digital Twin</title>
+    <title>MIH3201 EMG Wristband Prototype</title>
     <style>
         body { 
             margin: 0; 
@@ -11,6 +11,7 @@
             background-color: #1a1a1a; 
             font-family: sans-serif;
         }
+        /* Top Left Status Overlay */
         #status { 
             position: absolute; 
             top: 2vw;  
@@ -25,6 +26,42 @@
             word-wrap: break-word;
             z-index: 10;
         }
+        
+        /* NEW: Top Right Instruction Panel */
+        #instructions {
+            position: absolute;
+            top: 2vw;
+            right: 2vw;
+            color: #ffffff;
+            background: rgba(0,0,0,0.7);
+            padding: clamp(10px, 1.5vw, 20px);
+            border-radius: 8px;
+            z-index: 10;
+            font-size: clamp(12px, 1.2vw, 16px);
+            max-width: 250px;
+        }
+        #instructions h3 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+            font-size: clamp(14px, 1.5vw, 18px);
+            text-align: center;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+        #instructions ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #instructions li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        #instructions b {
+            color: #00ccff; /* Light blue to make the gestures pop */
+        }
+
+        /* Bottom Right Webcam Container */
         #camera-container {
             position: absolute;
             bottom: 20px;
@@ -38,7 +75,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             z-index: 10;
         }
-        /* FIX 1: object-fit contain ensures the canvas and video align perfectly 1:1 */
         #webcam, #output_canvas {
             position: absolute;
             top: 0;
@@ -68,7 +104,21 @@
 </head>
 <body>
     <div id="loading">Loading AI Models & 3D Environment... Please Allow Camera Access.</div>
+    
     <div id="status">Initializing...</div>
+    
+    <div id="instructions">
+        <h3>Gesture Guide</h3>
+        <ul>
+            <li><b>OK Sign:</b> Lights On</li>
+            <li><b>Pinch:</b> Lights Off</li>
+            <li><b>Fist w/thumb out:</b> Emergency</li>
+            <li><b>Index Up:</b> Bed -> Seating</li>
+            <li><b>L-Shape:</b> Bed -> Flat</li>
+            <li><b>Open Palm:</b> Everything Off</li>
+            <li><b>3 Fingers:</b> Toggle Fan</li>
+        </ul>
+    </div>
     
     <div id="camera-container">
         <video id="webcam" autoplay playsinline></video>
@@ -78,9 +128,7 @@
     <script type="module">
         import { HandLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
-        // ==========================================
         // 1. SETUP 3D SCENE
-        // ==========================================
         const scene = new THREE.Scene();
         scene.background = new THREE.Color('#2a2a35');
         
@@ -139,9 +187,7 @@
         fanGroup.add(blades2);
         scene.add(fanGroup);
 
-        // ==========================================
         // 2. MEDIAPIPE AI & GESTURE LOGIC 
-        // ==========================================
         const video = document.getElementById("webcam");
         const canvasElement = document.getElementById("output_canvas");
         const canvasCtx = canvasElement.getContext("2d");
@@ -158,10 +204,10 @@
         const actionMap = {
             "OK_SIGN": "TURN ON LIGHTS",
             "PINCH": "TURN OFF LIGHTS",
-            "FIST": "EMERGENCY: REQUEST HELP",
+            "THUMB_OUT": "EMERGENCY: REQUEST HELP",
             "INDEX_POINT": "BED: ADJUST TO SEATING ANGLE",
             "L_SHAPE": "BED: ADJUST TO FLAT ANGLE",
-            "OPEN_PALM": "MASTER APPLIANCES OFF",
+            "OPEN_PALM": "EVERYTHING OFF",
             "THREE_FINGERS": "TOGGLE FAN",
             "TWO_FINGERS": "CLEAR SYSTEM"
         };
@@ -175,7 +221,6 @@
                 },
                 runningMode: "VIDEO",
                 numHands: 1,
-                // FIX 2: Lowered confidences from 0.7 to 0.5 to stop the tracking from flickering
                 minHandDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
             });
@@ -203,7 +248,6 @@
             
             const thumb_is_open = getDist(landmarks[4], landmarks[17]) > getDist(landmarks[2], landmarks[17]);
             
-            // Increased pinch tolerance slightly to make it easier to trigger
             const pinch_dist = getDist(landmarks[8], landmarks[4]);
             const is_pinching = pinch_dist < 0.08;
 
@@ -212,12 +256,9 @@
                 else return "PINCH";
             }
             else if (index_open && middle_open && ring_open && pinky_open && thumb_is_open) return "OPEN_PALM";
-            
-            // FIX 3: Bulletproof FIST logic. If the 4 main fingers are closed, it's a fist. Period.
             else if (!index_open && !middle_open && !ring_open && !pinky_open) {
-                return "FIST";
+                return "THUMB_OUT";
             }
-            
             else if (index_open && middle_open && ring_open && !pinky_open) return "THREE_FINGERS";
             else if (index_open && middle_open && !ring_open && !pinky_open) return "TWO_FINGERS";
             else if (thumb_is_open && index_open && !middle_open && !ring_open && !pinky_open) return "L_SHAPE";
@@ -300,7 +341,7 @@
                 case "BED: ADJUST TO FLAT ANGLE": targetHeadrestAngle = 0; break;
                 case "TOGGLE FAN": isFanOn = !isFanOn; break;
                 case "EMERGENCY: REQUEST HELP": isEmergency = true; break;
-                case "MASTER APPLIANCES OFF":
+                case "EVERYTHING OFF":
                     mainLight.intensity = 0.1; ambientLight.intensity = 0.3;
                     isFanOn = false; targetHeadrestAngle = 0; isEmergency = false; break;
             }
