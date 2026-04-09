@@ -135,12 +135,12 @@
     <div id="status">Initializing...</div>
     
     <div id="instructions">
-        <h3>Gesture Guide (Hold for 2s)</h3>
+        <h3>Gesture Guide</h3>
         <ul>
             <li><b>OK Sign:</b> Lights On</li>
-            <li><b>Fist w/pinch:</b> Lights Off</li>
+            <li><b>Pinch:</b> Lights Off</li>
             <li><b>Fist w/thumb out:</b> Emergency</li>
-            <li><b>Index Up:</b> Bed -> Seating</li>
+            <li><b>2 Fingers:</b> Bed -> Seating</li>
             <li><b>L-Shape:</b> Bed -> Flat</li>
             <li><b>Open Palm:</b> Everything Off</li>
             <li><b>3 Fingers:</b> Toggle Fan</li>
@@ -240,11 +240,10 @@
             "OK_SIGN": "TURN ON LIGHTS",
             "PINCH": "TURN OFF LIGHTS",
             "THUMB_OUT": "EMERGENCY: REQUEST HELP",
-            "INDEX_POINT": "BED: ADJUST TO SEATING ANGLE",
+            "TWO_FINGERS": "BED: ADJUST TO SEATING ANGLE",
             "L_SHAPE": "BED: ADJUST TO FLAT ANGLE",
             "OPEN_PALM": "EVERYTHING OFF",
             "THREE_FINGERS": "TOGGLE FAN",
-            "TWO_FINGERS": "CLEAR SYSTEM"
         };
 
         async function createHandLandmarker() {
@@ -300,8 +299,6 @@
             else if (index_open && middle_open && ring_open && !pinky_open) return "THREE_FINGERS";
             else if (index_open && middle_open && !ring_open && !pinky_open) return "TWO_FINGERS";
             else if (thumb_is_open && index_open && !middle_open && !ring_open && !pinky_open) return "L_SHAPE";
-            else if (index_open && !middle_open && !ring_open && !pinky_open) return "INDEX_POINT";
-            
             return "NONE";
         }
 
