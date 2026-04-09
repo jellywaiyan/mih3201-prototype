@@ -27,7 +27,7 @@
             z-index: 10;
         }
         
-        /* NEW: Top Right Instruction Panel */
+        /* Top Right Instruction Panel */
         #instructions {
             position: absolute;
             top: 2vw;
@@ -58,7 +58,7 @@
             line-height: 1.4;
         }
         #instructions b {
-            color: #00ccff; /* Light blue to make the gestures pop */
+            color: #00ccff;
         }
 
         /* Bottom Right Webcam Container */
@@ -98,6 +98,33 @@
             font-size: 24px;
             z-index: 20;
             transition: opacity 0.5s;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* ==========================================
+           MOBILE RESPONSIVENESS (Phones / Tablets)
+           ========================================== */
+        @media (max-width: 768px) {
+            #camera-container {
+                width: 35vw; /* Shrinks camera so it doesn't take up the whole screen */
+                height: 26.25vw; /* Keeps the 4:3 video ratio */
+                bottom: 10px;
+                right: 10px;
+                border-width: 2px;
+            }
+            #instructions {
+                top: auto;
+                bottom: 10px;
+                left: 10px; /* Moves instructions to bottom left to prevent overlapping */
+                right: auto;
+                max-width: 45vw; /* Ensures it doesn't hit the camera */
+            }
+            #status {
+                top: 10px;
+                left: 10px;
+            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -132,8 +159,10 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color('#2a2a35');
         
+        // Dynamically set camera distance based on screen width
+        const isMobile = window.innerWidth < 768;
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 10);
+        camera.position.set(0, 5, isMobile ? 15 : 10); // Pulls camera back to 15 on mobile
         camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -142,6 +171,12 @@
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
+            // Adjust camera zoom if window is resized past mobile threshold
+            if (window.innerWidth < 768) {
+                camera.position.z = 15;
+            } else {
+                camera.position.z = 10;
+            }
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
@@ -231,7 +266,10 @@
         }
 
         function startCamera() {
-            navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+            // Added ideal facing mode to default to front camera on mobile
+            navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user" } 
+            }).then((stream) => {
                 video.srcObject = stream;
                 video.addEventListener("loadeddata", predictWebcam);
             });
